@@ -40,7 +40,6 @@
         .preview-table th, .preview-table td { border: 1px solid black; padding: 10px; text-align: left; vertical-align: top; color: black; font-size: 14px; }
         .preview-table th { background: #f2f2f2; text-align: center; }
         
-        /* Modal Style */
         #mgr-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:20px; box-shadow:0 0 20px rgba(0,0,0,0.3); z-index:2000; border-radius:8px; width:400px; }
         .overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1999; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -74,7 +73,6 @@
         </div>
     </div>
 
-    <!-- TAB NHẬP LIỆU -->
     <div id="input-tab" class="tab-content active">
         <div class="toolbar">
             <strong>Chọn thời gian:</strong>
@@ -82,12 +80,9 @@
             <span id="load-status" style="font-size:12px; font-style: italic;"></span>
             <button class="btn-save" id="saveBtn">💾 Lưu Báo Cáo Của Tôi</button>
         </div>
-        <div class="grid" id="main-grid">
-            <!-- Ô nhập liệu tự động sinh ra tại đây -->
-        </div>
+        <div class="grid" id="main-grid"></div>
     </div>
 
-    <!-- TAB TỔNG HỢP -->
     <div id="summary-tab" class="tab-content">
         <div class="toolbar">
             <strong>Tổng hợp theo:</strong>
@@ -134,7 +129,6 @@
 
     let listDepts = [];
 
-    // --- 1. XÁC THỰC & KHỞI TẠO ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
             document.getElementById('user-display').innerText = `Tài khoản: ${user.email}`;
@@ -153,7 +147,6 @@
         loadCurrentWeekData();
     }
 
-    // --- 2. QUẢN LÝ BAN NGÀNH (SETTINGS) ---
     async function loadDeptList() {
         const snap = await get(ref(db, 'settings/departments'));
         const data = snap.val() || {};
@@ -163,9 +156,13 @@
         container.innerHTML = listDepts.map(d => `
             <div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center; background:#f9f9f9; padding:5px 10px; border-radius:4px;">
                 <span style="font-size:13px;">${d.name}</span>
-                <button class="btn-danger" onclick="deleteDept('${d.id}')">Xóa</button>
+                <button class="btn-danger" id="del-${d.id}">Xóa</button>
             </div>
         `).join('');
+
+        listDepts.forEach(d => {
+            document.getElementById(`del-${d.id}`).onclick = () => deleteDept(d.id);
+        });
     }
 
     window.addNewDept = async () => {
@@ -177,40 +174,37 @@
         await initSystem();
     };
 
-    window.deleteDept = async (id) => {
-        if (confirm("Xóa ban ngành này khỏi danh sách nhập? Dữ liệu đã lưu trước đó vẫn được giữ lại trong báo cáo tổng hợp.")) {
+    async function deleteDept(id) {
+        if (confirm("Xóa ban ngành này?")) {
             await remove(ref(db, `settings/departments/${id}`));
             await initSystem();
         }
-    };
+    }
 
-    // --- 3. HIỂN THỊ FORM NHẬP ---
     function renderInputGrid() {
         const grid = document.getElementById('main-grid');
         if(listDepts.length === 0) {
-            grid.innerHTML = "<p style='color:gray; padding:20px;'>Chưa có ban ngành nào. Vui lòng thêm ở mục Quản lý Đơn vị.</p>";
+            grid.innerHTML = "<p style='color:gray; padding:20px;'>Chưa có ban ngành nào.</p>";
             return;
         }
         grid.innerHTML = listDepts.map(d => `
             <div class="card">
                 <h2>${d.name}</h2>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div><label style="font-size:11px; font-weight:bold; color:var(--gray)">KẾT QUẢ ĐẠT ĐƯỢC:</label>
-                    <textarea id="${d.id}-kq" placeholder="Nhập kết quả công tác..."></textarea></div>
-                    <div><label style="font-size:11px; font-weight:bold; color:var(--gray)">PHƯƠNG HƯỚNG:</label>
-                    <textarea id="${d.id}-ph" placeholder="Nhập phương hướng tuần tới..."></textarea></div>
+                    <div><label style="font-size:11px; font-weight:bold;">KẾT QUẢ:</label>
+                    <textarea id="${d.id}-kq"></textarea></div>
+                    <div><label style="font-size:11px; font-weight:bold;">PHƯƠNG HƯỚNG:</label>
+                    <textarea id="${d.id}-ph"></textarea></div>
                 </div>
             </div>
         `).join('');
     }
 
-    // --- 4. XỬ LÝ LƯU & TẢI DỮ LIỆU CÁ NHÂN ---
     document.getElementById('saveBtn').onclick = async () => {
         const user = auth.currentUser;
         const w = document.getElementById('week-select-box').value;
         const y = new Date().getFullYear();
-        const uid = user.uid;
-
+        
         const reportData = {
             userEmail: user.email,
             updateTime: new Date().toLocaleString(),
@@ -225,7 +219,7 @@
             };
         });
 
-        await set(ref(db, `data_reports/${y}/week_${w}/${uid}`), reportData);
+        await set(ref(db, `data_reports/${y}/week_${w}/${user.uid}`), reportData);
         alert("✅ Đã lưu báo cáo cá nhân tuần " + w);
     };
 
@@ -235,13 +229,12 @@
         const w = document.getElementById('week-select-box').value;
         const y = new Date().getFullYear();
         
-        document.getElementById('load-status').innerText = "⌛ Đang tải dữ liệu của bạn...";
+        document.getElementById('load-status').innerText = "⌛ Đang tải dữ liệu...";
         const snap = await get(ref(db, `data_reports/${y}/week_${w}/${user.uid}`));
         
-        // Reset form trước
         listDepts.forEach(d => {
-            if(document.getElementById(`${d.id}-kq`)) document.getElementById(`${d.id}-kq`).value = "";
-            if(document.getElementById(`${d.id}-ph`)) document.getElementById(`${d.id}-ph`).value = "";
+            document.getElementById(`${d.id}-kq`).value = "";
+            document.getElementById(`${d.id}-ph`).value = "";
         });
 
         if (snap.exists()) {
@@ -250,59 +243,55 @@
                 if(document.getElementById(`${id}-kq`)) document.getElementById(`${id}-kq`).value = data[id].kq || "";
                 if(document.getElementById(`${id}-ph`)) document.getElementById(`${id}-ph`).value = data[id].ph || "";
             });
-            document.getElementById('load-status').innerText = "✅ Đã tải dữ liệu cá nhân.";
+            document.getElementById('load-status').innerText = "✅ Đã tải dữ liệu.";
         } else {
-            document.getElementById('load-status').innerText = "✨ Tuần mới (chưa có dữ liệu).";
+            document.getElementById('load-status').innerText = "✨ Tuần mới.";
         }
     }
 
-    // --- 5. TỔNG HỢP TOÀN BỘ CƠ QUAN ---
     document.getElementById('aggMonthBtn').onclick = async () => {
         const m = document.getElementById('view-m').value;
         const y = document.getElementById('view-y').value;
         const snap = await get(ref(db, `data_reports/${y}`));
         
-        if (!snap.exists()) { alert("Không tìm thấy dữ liệu năm " + y); return; }
+        if (!snap.exists()) { alert("Không có dữ liệu"); return; }
         
         const allWeeks = snap.val();
-        let consolidated = {}; // { deptId: { name, kq: [], ph: [] } }
+        let consolidated = {}; // Theo ban ngành
 
-        // Duyệt tất cả các tuần đã có dữ liệu
         Object.keys(allWeeks).forEach(weekKey => {
             const weekNum = weekKey.split('_')[1];
             const usersInWeek = allWeeks[weekKey];
 
-            // Duyệt từng User đã gửi bài trong tuần đó
             Object.keys(usersInWeek).forEach(uid => {
-                const reportContent = usersInWeek[uid].content;
+                const report = usersInWeek[uid];
+                const emailLabel = `<span style="color:blue; font-size:11px;">(${report.userEmail})</span>`;
                 
-                Object.keys(reportContent).forEach(deptId => {
+                Object.keys(report.content).forEach(deptId => {
                     if (!consolidated[deptId]) {
-                        consolidated[deptId] = { name: reportContent[deptId].name, kq: [], ph: [] };
+                        consolidated[deptId] = { name: report.content[deptId].name, kq: [], ph: [] };
                     }
-                    if (reportContent[deptId].kq) 
-                        consolidated[deptId].kq.push(`- (T${weekNum}): ${reportContent[deptId].kq}`);
-                    if (reportContent[deptId].ph) 
-                        consolidated[deptId].ph.push(`- (T${weekNum}): ${reportContent[deptId].ph}`);
+                    if (report.content[deptId].kq) 
+                        consolidated[deptId].kq.push(`<b>T${weekNum}</b> ${emailLabel}: ${report.content[deptId].kq}`);
+                    if (report.content[deptId].ph) 
+                        consolidated[deptId].ph.push(`<b>T${weekNum}</b> ${emailLabel}: ${report.content[deptId].ph}`);
                 });
             });
         });
 
-        // Vẽ bảng tổng hợp
         let html = "";
         Object.keys(consolidated).forEach(id => {
             html += `<tr>
                 <td><b>${consolidated[id].name}</b></td>
-                <td>${consolidated[id].kq.join('<br>')}</td>
-                <td>${consolidated[id].ph.join('<br>')}</td>
+                <td>${consolidated[id].kq.join('<br><div style="margin-top:5px;"></div>')}</td>
+                <td>${consolidated[id].ph.join('<br><div style="margin-top:5px;"></div>')}</td>
             </tr>`;
         });
 
-        document.getElementById('out-body').innerHTML = html || "<tr><td colspan='3' style='text-align:center;'>Không có dữ liệu nào được tìm thấy.</td></tr>";
-        document.getElementById('out-time').innerText = `Dữ liệu tổng hợp Tháng ${m} / Năm ${y}`;
+        document.getElementById('out-body').innerHTML = html || "<tr><td colspan='3'>Trống</td></tr>";
+        document.getElementById('out-time').innerText = `Tổng hợp Tháng ${m} / Năm ${y}`;
     };
 
-    // --- UTILS ---
     window.handleWeekChange = () => loadCurrentWeekData();
 
     function initTimeControls() {
@@ -346,7 +335,7 @@
         const blob = new Blob(['\ufeff', header + content + footer], { type: 'application/msword' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `Bao_cao_tong_hop_${new Date().toLocaleDateString()}.doc`;
+        link.download = `Bao_cao_tong_hop.doc`;
         link.click();
     }
 </script>
