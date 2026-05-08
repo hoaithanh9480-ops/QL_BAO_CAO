@@ -54,7 +54,8 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-
+// Dòng kiểm tra:
+console.log("Firebase Auth Project ID:", auth.config.authDomain);
     let isLoginMode = true;
 
     // Hàm đổi chế độ Đăng nhập <-> Đăng ký
