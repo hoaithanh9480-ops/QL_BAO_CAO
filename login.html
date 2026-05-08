@@ -3,163 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập / Đăng ký - Kiểm phiếu</title>
+    <title>Đăng nhập / Đăng ký - Hệ thống Báo cáo</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        body {
-            background-color: #f5f5f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .auth-container {
-            width: 100%;
-            max-width: 400px;
-            padding: 20px;
-        }
-        .auth-form {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .auth-form h2 {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            color: #2c3e50;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 0.75rem;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .btn:hover {
-            background-color: #2980b9;
-        }
-        .toggle-link {
-            text-align: center;
-            margin-top: 1rem;
-            font-size: 0.9rem;
-            cursor: pointer;
-            color: #3498db;
-        }
-        .error {
-            color: #c62828;
-            font-size: 0.9rem;
-            margin-top: 0.5rem;
-        }
-        /* Responsive cho màn hình nhỏ (mobile) */
-        @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-        
-            .form-row {
-                flex-direction: column;
-                gap: 10px;
-            }
-        
-            .btn {
-                width: 100%;
-                text-align: center;
-                margin-top: 10px;
-            }
-        
-            .container {
-                padding: 10px;
-            }
-        
-            h2 {
-                font-size: 1.2rem;
-                text-align: center;
-            }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .auth-container { width: 100%; max-width: 400px; padding: 20px; }
+        .auth-form { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .auth-form h2 { text-align: center; margin-bottom: 1.5rem; color: #1a73e8; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 14px; }
+        .form-group input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
+        .btn { display: block; width: 100%; padding: 0.75rem; background-color: #1a73e8; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; font-weight: bold; }
+        .btn:hover { background-color: #1557b0; }
+        .toggle-link { text-align: center; margin-top: 1rem; font-size: 0.9rem; cursor: pointer; color: #1a73e8; text-decoration: underline; }
+        .error { color: #c62828; font-size: 0.85rem; margin-top: 0.5rem; text-align: center; min-height: 20px; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
     <div class="auth-container">
-        <!-- Form Đăng nhập -->
-        <div class="auth-form" id="loginForm">
-            <h2>Đăng nhập hệ thống</h2>
+        <form class="auth-form" id="loginForm">
+            <h2>Đăng nhập</h2>
             <div class="form-group">
-                <label for="loginEmail">Email</label>
-                <input type="email" id="loginEmail" placeholder="Nhập email">
+                <label>Email</label>
+                <input type="email" id="loginEmail" autocomplete="username" placeholder="Nhập email đơn vị">
             </div>
             <div class="form-group">
-                <label for="loginPassword">Mật khẩu</label>
-                <input type="password" id="loginPassword" placeholder="Nhập mật khẩu">
+                <label>Mật khẩu</label>
+                <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Nhập mật khẩu">
             </div>
-            <button id="loginBtn" class="btn">Đăng nhập</button>
+            <button type="button" id="loginBtn" class="btn">Đăng nhập</button>
             <div id="loginError" class="error"></div>
-            <div class="toggle-link" onclick="showRegister()">Chưa có tài khoản? Đăng ký</div>
-        </div>
+            <div class="toggle-link" onclick="showRegister()">Chưa có tài khoản? Đăng ký ngay</div>
+        </form>
 
-        <!-- Form Đăng ký -->
-        <div class="auth-form" id="registerForm" style="display:none;">
+        <form class="auth-form" id="registerForm" style="display:none;">
             <h2>Đăng ký tài khoản</h2>
             <div class="form-group">
-                <label for="registerEmail">Email</label>
-                <input type="email" id="registerEmail" placeholder="Nhập email">
+                <label>Email đơn vị</label>
+                <input type="email" id="registerEmail" autocomplete="username" placeholder="Nhập email">
             </div>
             <div class="form-group">
-                <label for="registerPassword">Mật khẩu</label>
-                <input type="password" id="registerPassword" placeholder="Mật khẩu (6 chữ số)">
+                <label>Mật khẩu mới</label>
+                <input type="password" id="registerPassword" autocomplete="new-password" placeholder="Tối thiểu 6 ký tự">
             </div>
-            <button id="registerBtn" class="btn">Đăng ký</button>
+            <button type="button" id="registerBtn" class="btn">Tạo tài khoản</button>
             <div id="registerError" class="error"></div>
             <div class="toggle-link" onclick="showLogin()">Đã có tài khoản? Đăng nhập</div>
-        </div>
+        </form>
     </div>
 
     <script>
-        // Firebase config
         const firebaseConfig = { 
-          apiKey : "AIzaSyD9wRwlGRC0Z19KcXDOzdZTtHMQe_rzm3A" , 
-          authDomain : "quan-ly-bao-cao.firebaseapp.com" , 
-          databaseURL : "https://quan-ly-bao-cao-default-rtdb.asia-southeast1.firebaseddatabase.app" , 
-          projectId : "quan-ly-bao-cao" , 
-          storageBucket : "quan-ly-bao-cao.firebasestorage.app" , 
-          messagingSenderId : "425173044949" , 
-          appId : "1:425173044949:web:778223106303e759e51c5c" 
+          apiKey: "AIzaSyD9wRwlGRC0Z19KcXDOzdZTtHMQe_rzm3A", 
+          authDomain: "quan-ly-bao-cao.firebaseapp.com", 
+          databaseURL: "https://quan-ly-bao-cao-default-rtdb.asia-southeast1.firebasedatabase.app", 
+          projectId: "quan-ly-bao-cao", 
+          storageBucket: "quan-ly-bao-cao.firebasestorage.app", 
+          messagingSenderId: "425173044949", 
+          appId: "1:425173044949:web:778223106303e759e51c5c" 
         };
 
-        // Khởi tạo Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
+        const database = firebase.database(); // Đã thêm để sửa lỗi ReferenceError
 
-        // Chuyển đổi form
         function showRegister() {
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
@@ -169,67 +79,52 @@
             document.getElementById('loginForm').style.display = 'block';
         }
 
-        // Đăng nhập
+        // Xử lý Đăng nhập
         document.getElementById('loginBtn').addEventListener('click', () => {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
         
             if (!email || !password) {
-                document.getElementById('loginError').textContent = 'Vui lòng nhập đầy đủ thông tin!';
+                errorDiv.textContent = 'Vui lòng điền đầy đủ!';
                 return;
             }
         
             auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    console.log('Login successful:', userCredential.user.uid);
-                    window.location.href = 'index.html';
-                })
+                .then(() => window.location.href = 'index.html')
                 .catch((error) => {
-                    console.error('Login error:', error);
-                    document.getElementById('loginError').textContent = 'Email hoặc mật khẩu không đúng!';
+                    errorDiv.textContent = 'Sai tài khoản hoặc mật khẩu!';
                 });
         });
 
-        // Đăng ký
+        // Xử lý Đăng ký
         document.getElementById('registerBtn').addEventListener('click', () => {
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
+            const errorDiv = document.getElementById('registerError');
         
             if (!email || !password) {
-                document.getElementById('registerError').textContent = 'Vui lòng nhập đầy đủ thông tin!';
+                errorDiv.textContent = 'Vui lòng điền đầy đủ!';
                 return;
             }
         
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
-                    console.log('User created:', user.uid);
-                    
-                    // Lưu thông tin user vào database
+                    // Lưu thông tin vào Database đúng theo Rules
                     return database.ref('users/' + user.uid).set({
                         email: email,
-                        createdAt: firebase.database.ServerValue.TIMESTAMP,
-                        isAdmin: false
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
                     });
                 })
                 .then(() => {
-                    console.log('User data saved successfully');
                     alert('Đăng ký thành công!');
                     window.location.href = 'index.html';
                 })
                 .catch((error) => {
-                    console.error('Registration error:', error);
-                    let errorMessage = 'Lỗi đăng ký!';
-                    
-                    if (error.code === 'auth/email-already-in-use') {
-                        errorMessage = 'Email đã được sử dụng!';
-                    } else if (error.code === 'auth/weak-password') {
-                        errorMessage = 'Mật khẩu quá yếu!';
-                    } else if (error.code === 'auth/invalid-email') {
-                        errorMessage = 'Email không hợp lệ!';
-                    }
-                    
-                    document.getElementById('registerError').textContent = errorMessage;
+                    if (error.code === 'auth/email-already-in-use') errorDiv.textContent = 'Email đã tồn tại!';
+                    else if (error.code === 'auth/weak-password') errorDiv.textContent = 'Mật khẩu quá yếu!';
+                    else errorDiv.textContent = 'Lỗi đăng ký: ' + error.message;
                 });
         });
     </script>
