@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Báo Cáo Công Tác Tổng Hợp</title>
+    <style>
+        :root { --primary: #1a73e8; --secondary: #34a853; --danger: #ea4335; --gray: #5f6368; --light-bg: #e8f0fe; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; margin: 0; padding: 10px; }
+        .container { max-width: 1300px; margin: auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); min-height: 95vh; }
+        
+        .header-fixed { position: sticky; top: 0; background: white; z-index: 1000; padding: 15px 15px 5px 15px; margin: -15px -15px 10px -15px; border-radius: 12px 12px 0 0; border-bottom: 1px solid #eee; }
+        .user-info { float: right; font-size: 13px; color: var(--gray); display: flex; align-items: center; gap: 10px; }
+        h1 { text-align: center; color: var(--primary); margin: 0 0 10px 0; font-size: 22px; }
+        
+        .tabs { display: flex; gap: 5px; margin-bottom: 10px; }
+        .tab-link { padding: 10px 20px; cursor: pointer; border: none; background: none; font-size: 14px; font-weight: 600; color: var(--gray); border-bottom: 3px solid transparent; }
+        .tab-link.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-content { display: none; animation: fadeIn 0.4s; }
+        .tab-content.active { display: block; }
+
+        .toolbar { 
+            display: flex; gap: 10px; background: var(--light-bg); padding: 10px 15px; 
+            border-radius: 8px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;
+        }
+        
+        .week-select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: 600; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 15px; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; background: #fff; }
+        .card h2 { margin: 0 0 10px 0; font-size: 15px; color: var(--primary); border-left: 4px solid var(--primary); padding-left: 10px; }
+        
+        textarea { width: 100%; height: 100px; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; resize: vertical; box-sizing: border-box; font-size: 13px; font-family: inherit; }
+        button { border: none; border-radius: 5px; cursor: pointer; font-weight: bold; padding: 8px 15px; transition: 0.2s; }
+        .btn-save { background: var(--secondary); color: white; margin-left: auto; }
+        .btn-agg { background: var(--primary); color: white; }
+        .btn-danger { background: #fee; color: var(--danger); font-size: 11px; }
+
+        .summary-preview { background: #fff; border: 1px solid #ccc; padding: 40px; margin-top: 5px; font-family: "Times New Roman", serif; min-height: 600px; }
+        .preview-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .preview-table th, .preview-table td { border: 1px solid black; padding: 10px; text-align: left; vertical-align: top; color: black; font-size: 14px; }
+        .preview-table th { background: #f2f2f2; text-align: center; }
+        
+        /* Modal Style */
+        #mgr-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:20px; box-shadow:0 0 20px rgba(0,0,0,0.3); z-index:2000; border-radius:8px; width:400px; }
+        .overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1999; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeMgr()"></div>
+<div id="mgr-modal">
+    <h3>Cấu hình Ban Ngành</h3>
+    <p style="font-size: 12px; color: var(--gray);">Thêm tên đơn vị bạn muốn quản lý báo cáo.</p>
+    <div style="display:flex; gap:5px; margin-bottom:10px;">
+        <input type="text" id="new-dept-name" style="flex:1; padding:8px;" placeholder="Tên ban ngành mới...">
+        <button class="btn-agg" onclick="addNewDept()">Thêm</button>
+    </div>
+    <div id="dept-list-mgr" style="max-height:300px; overflow-y:auto; border-top:1px solid #eee; padding-top:10px;"></div>
+    <button onclick="closeMgr()" style="margin-top:10px; width:100%;">Đóng</button>
+</div>
+
+<div class="container">
+    <div class="header-fixed">
+        <div class="user-info">
+            <span id="user-display">Đang kiểm tra...</span>
+            <button class="btn-danger" onclick="logout()">Đăng xuất</button>
+        </div>
+        <h1>Hệ Thống Báo Cáo Công Tác</h1>
+        <div class="tabs">
+            <button class="tab-link active" onclick="openTab(event, 'input-tab')">📍 Nhập dữ liệu Tuần</button>
+            <button class="tab-link" onclick="openTab(event, 'summary-tab')">📊 Tổng hợp báo cáo</button>
+            <button class="tab-link" onclick="openMgr()" style="color:var(--secondary)">⚙️ Quản lý Đơn vị</button>
+        </div>
+    </div>
+
+    <!-- TAB NHẬP LIỆU -->
+    <div id="input-tab" class="tab-content active">
+        <div class="toolbar">
+            <strong>Chọn thời gian:</strong>
+            <select id="week-select-box" class="week-select" onchange="handleWeekChange()"></select>
+            <span id="load-status" style="font-size:12px; font-style: italic;"></span>
+            <button class="btn-save" id="saveBtn">💾 Lưu Báo Cáo Của Tôi</button>
+        </div>
+        <div class="grid" id="main-grid">
+            <!-- Ô nhập liệu tự động sinh ra tại đây -->
+        </div>
+    </div>
+
+    <!-- TAB TỔNG HỢP -->
+    <div id="summary-tab" class="tab-content">
+        <div class="toolbar">
+            <strong>Tổng hợp theo:</strong>
+            <select id="view-m" style="padding:6px;"></select>
+            <select id="view-y" style="padding:6px;"></select>
+            <button class="btn-agg" id="aggMonthBtn">🔍 Truy xuất dữ liệu</button>
+            <button style="background:#2b579a; color:white;" onclick="exportToWord()">📝 Xuất File Word</button>
+        </div>
+        <div id="capture-area" class="summary-preview">
+            <h2 style="text-align: center; margin: 0; font-size: 20px;">BÁO CÁO CÔNG TÁC TỔNG HỢP</h2>
+            <p style="text-align: center; font-style: italic; margin-bottom: 30px;" id="out-time"></p>
+            <table class="preview-table">
+                <thead>
+                    <tr>
+                        <th style="width:18%">Đơn vị</th>
+                        <th style="width:41%">Kết quả đạt được</th>
+                        <th style="width:41%">Phương hướng nhiệm vụ</th>
+                    </tr>
+                </thead>
+                <tbody id="out-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, get, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyApVwM5YKc86cFXU4p-n8NO8f5wRKyzEUQ",
+        authDomain: "bao-cao-tuan-thang.firebaseapp.com",
+        databaseURL: "https://bao-cao-tuan-thang-default-rtdb.firebaseio.com",
+        projectId: "bao-cao-tuan-thang",
+        storageBucket: "bao-cao-tuan-thang.firebasestorage.app",
+        messagingSenderId: "481940887281",
+        appId: "1:481940887281:web:a5fb423655b4361f2dbb50"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    let listDepts = [];
+
+    // --- 1. XÁC THỰC & KHỞI TẠO ---
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('user-display').innerText = `Tài khoản: ${user.email}`;
+            initSystem();
+        } else {
+            window.location.href = "login.html";
+        }
+    });
+
+    window.logout = () => signOut(auth).then(() => window.location.href = "login.html");
+
+    async function initSystem() {
+        await loadDeptList();
+        initTimeControls();
+        renderInputGrid();
+        loadCurrentWeekData();
+    }
+
+    // --- 2. QUẢN LÝ BAN NGÀNH (SETTINGS) ---
+    async function loadDeptList() {
+        const snap = await get(ref(db, 'settings/departments'));
+        const data = snap.val() || {};
+        listDepts = Object.keys(data).map(id => ({ id, name: data[id].name }));
+        
+        const container = document.getElementById('dept-list-mgr');
+        container.innerHTML = listDepts.map(d => `
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center; background:#f9f9f9; padding:5px 10px; border-radius:4px;">
+                <span style="font-size:13px;">${d.name}</span>
+                <button class="btn-danger" onclick="deleteDept('${d.id}')">Xóa</button>
+            </div>
+        `).join('');
+    }
+
+    window.addNewDept = async () => {
+        const name = document.getElementById('new-dept-name').value.trim();
+        if (!name) return;
+        const id = 'dept_' + Date.now();
+        await set(ref(db, `settings/departments/${id}`), { name: name });
+        document.getElementById('new-dept-name').value = "";
+        await initSystem();
+    };
+
+    window.deleteDept = async (id) => {
+        if (confirm("Xóa ban ngành này khỏi danh sách nhập? Dữ liệu đã lưu trước đó vẫn được giữ lại trong báo cáo tổng hợp.")) {
+            await remove(ref(db, `settings/departments/${id}`));
+            await initSystem();
+        }
+    };
+
+    // --- 3. HIỂN THỊ FORM NHẬP ---
+    function renderInputGrid() {
+        const grid = document.getElementById('main-grid');
+        if(listDepts.length === 0) {
+            grid.innerHTML = "<p style='color:gray; padding:20px;'>Chưa có ban ngành nào. Vui lòng thêm ở mục Quản lý Đơn vị.</p>";
+            return;
+        }
+        grid.innerHTML = listDepts.map(d => `
+            <div class="card">
+                <h2>${d.name}</h2>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div><label style="font-size:11px; font-weight:bold; color:var(--gray)">KẾT QUẢ ĐẠT ĐƯỢC:</label>
+                    <textarea id="${d.id}-kq" placeholder="Nhập kết quả công tác..."></textarea></div>
+                    <div><label style="font-size:11px; font-weight:bold; color:var(--gray)">PHƯƠNG HƯỚNG:</label>
+                    <textarea id="${d.id}-ph" placeholder="Nhập phương hướng tuần tới..."></textarea></div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // --- 4. XỬ LÝ LƯU & TẢI DỮ LIỆU CÁ NHÂN ---
+    document.getElementById('saveBtn').onclick = async () => {
+        const user = auth.currentUser;
+        const w = document.getElementById('week-select-box').value;
+        const y = new Date().getFullYear();
+        const uid = user.uid;
+
+        const reportData = {
+            userEmail: user.email,
+            updateTime: new Date().toLocaleString(),
+            content: {}
+        };
+        
+        listDepts.forEach(d => {
+            reportData.content[d.id] = {
+                name: d.name,
+                kq: document.getElementById(`${d.id}-kq`).value,
+                ph: document.getElementById(`${d.id}-ph`).value
+            };
+        });
+
+        await set(ref(db, `data_reports/${y}/week_${w}/${uid}`), reportData);
+        alert("✅ Đã lưu báo cáo cá nhân tuần " + w);
+    };
+
+    async function loadCurrentWeekData() {
+        const user = auth.currentUser;
+        if (!user) return;
+        const w = document.getElementById('week-select-box').value;
+        const y = new Date().getFullYear();
+        
+        document.getElementById('load-status').innerText = "⌛ Đang tải dữ liệu của bạn...";
+        const snap = await get(ref(db, `data_reports/${y}/week_${w}/${user.uid}`));
+        
+        // Reset form trước
+        listDepts.forEach(d => {
+            if(document.getElementById(`${d.id}-kq`)) document.getElementById(`${d.id}-kq`).value = "";
+            if(document.getElementById(`${d.id}-ph`)) document.getElementById(`${d.id}-ph`).value = "";
+        });
+
+        if (snap.exists()) {
+            const data = snap.val().content;
+            Object.keys(data).forEach(id => {
+                if(document.getElementById(`${id}-kq`)) document.getElementById(`${id}-kq`).value = data[id].kq || "";
+                if(document.getElementById(`${id}-ph`)) document.getElementById(`${id}-ph`).value = data[id].ph || "";
+            });
+            document.getElementById('load-status').innerText = "✅ Đã tải dữ liệu cá nhân.";
+        } else {
+            document.getElementById('load-status').innerText = "✨ Tuần mới (chưa có dữ liệu).";
+        }
+    }
+
+    // --- 5. TỔNG HỢP TOÀN BỘ CƠ QUAN ---
+    document.getElementById('aggMonthBtn').onclick = async () => {
+        const m = document.getElementById('view-m').value;
+        const y = document.getElementById('view-y').value;
+        const snap = await get(ref(db, `data_reports/${y}`));
+        
+        if (!snap.exists()) { alert("Không tìm thấy dữ liệu năm " + y); return; }
+        
+        const allWeeks = snap.val();
+        let consolidated = {}; // { deptId: { name, kq: [], ph: [] } }
+
+        // Duyệt tất cả các tuần đã có dữ liệu
+        Object.keys(allWeeks).forEach(weekKey => {
+            const weekNum = weekKey.split('_')[1];
+            const usersInWeek = allWeeks[weekKey];
+
+            // Duyệt từng User đã gửi bài trong tuần đó
+            Object.keys(usersInWeek).forEach(uid => {
+                const reportContent = usersInWeek[uid].content;
+                
+                Object.keys(reportContent).forEach(deptId => {
+                    if (!consolidated[deptId]) {
+                        consolidated[deptId] = { name: reportContent[deptId].name, kq: [], ph: [] };
+                    }
+                    if (reportContent[deptId].kq) 
+                        consolidated[deptId].kq.push(`- (T${weekNum}): ${reportContent[deptId].kq}`);
+                    if (reportContent[deptId].ph) 
+                        consolidated[deptId].ph.push(`- (T${weekNum}): ${reportContent[deptId].ph}`);
+                });
+            });
+        });
+
+        // Vẽ bảng tổng hợp
+        let html = "";
+        Object.keys(consolidated).forEach(id => {
+            html += `<tr>
+                <td><b>${consolidated[id].name}</b></td>
+                <td>${consolidated[id].kq.join('<br>')}</td>
+                <td>${consolidated[id].ph.join('<br>')}</td>
+            </tr>`;
+        });
+
+        document.getElementById('out-body').innerHTML = html || "<tr><td colspan='3' style='text-align:center;'>Không có dữ liệu nào được tìm thấy.</td></tr>";
+        document.getElementById('out-time').innerText = `Dữ liệu tổng hợp Tháng ${m} / Năm ${y}`;
+    };
+
+    // --- UTILS ---
+    window.handleWeekChange = () => loadCurrentWeekData();
+
+    function initTimeControls() {
+        const sel = document.getElementById('week-select-box');
+        if(sel.options.length > 0) return; 
+        const now = new Date();
+        const currentW = getWeekNumber(now);
+        for (let i = 1; i <= 52; i++) {
+            let opt = document.createElement('option');
+            opt.value = i; opt.text = `Tuần ${i}`;
+            if (i === currentW) opt.selected = true;
+            sel.appendChild(opt);
+        }
+        const vm = document.getElementById('view-m'), vy = document.getElementById('view-y');
+        for(let i=1; i<=12; i++) vm.innerHTML += `<option value="${String(i).padStart(2,'0')}" ${i==now.getMonth()+1?'selected':''}>Tháng ${i}</option>`;
+        for(let i=2025; i<=2030; i++) vy.innerHTML += `<option value="${i}" ${i==now.getFullYear()?'selected':''}>Năm ${i}</option>`;
+    }
+
+    function getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+    }
+
+    window.openMgr = () => { document.getElementById('mgr-modal').style.display='block'; document.getElementById('overlay').style.display='block'; };
+    window.closeMgr = () => { document.getElementById('mgr-modal').style.display='none'; document.getElementById('overlay').style.display='none'; };
+</script>
+
+<script>
+    function openTab(evt, name) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+        document.getElementById(name).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    }
+
+    function exportToWord() {
+        const content = document.getElementById('capture-area').innerHTML;
+        const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>table{border-collapse:collapse; width:100%;} th,td{border:1px solid black; padding:8px; font-family:"Times New Roman"; font-size:12pt;} .preview-table th {background:#f2f2f2;}</style></head><body>`;
+        const footer = "</body></html>";
+        const blob = new Blob(['\ufeff', header + content + footer], { type: 'application/msword' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Bao_cao_tong_hop_${new Date().toLocaleDateString()}.doc`;
+        link.click();
+    }
+</script>
+</body>
+</html>

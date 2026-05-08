@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập / Đăng ký Hệ thống</title>
+    <style>
+        :root { --primary: #1a73e8; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        h2 { color: var(--primary); margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; margin-top: 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; }
+        .btn-login { background: var(--primary); color: white; }
+        .btn-login:hover { background: #1557b0; }
+        .toggle-link { margin-top: 15px; font-size: 13px; color: #5f6368; }
+        .toggle-link span { color: var(--primary); cursor: pointer; text-decoration: underline; }
+        #msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
+        .error { color: #d93025; }
+        .success { color: #188038; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 id="form-title">Đăng nhập</h2>
+    <div id="auth-form">
+        <input type="email" id="email" placeholder="Email (ví dụ: congan@abc.com)">
+        <input type="password" id="password" placeholder="Mật khẩu (ít nhất 6 ký tự)">
+        <button id="btnMain" class="btn-login">Vào hệ thống</button>
+    </div>
+    
+    <div id="msg"></div>
+
+    <div class="toggle-link">
+        <p id="toggle-text">Chưa có tài khoản? <span onclick="toggleAuth()">Đăng ký ngay</span></p>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // CẤU HÌNH FIREBASE (Dùng chung với file index.html)
+    const firebaseConfig = {
+        apiKey: "AIzaSyApVwM5YKc86cFXU4p-n8NO8f5wRKyzEUQ",
+        authDomain: "bao-cao-tuan-thang.firebaseapp.com",
+        databaseURL: "https://bao-cao-tuan-thang-default-rtdb.firebaseio.com",
+        projectId: "bao-cao-tuan-thang",
+        storageBucket: "bao-cao-tuan-thang.firebasestorage.app",
+        messagingSenderId: "481940887281",
+        appId: "1:481940887281:web:a5fb423655b4361f2dbb50"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    let isLoginMode = true;
+
+    // Hàm đổi chế độ Đăng nhập <-> Đăng ký
+    window.toggleAuth = () => {
+        isLoginMode = !isLoginMode;
+        document.getElementById('form-title').innerText = isLoginMode ? "Đăng nhập" : "Đăng ký tài khoản";
+        document.getElementById('btnMain').innerText = isLoginMode ? "Vào hệ thống" : "Tạo tài khoản";
+        document.getElementById('toggle-text').innerHTML = isLoginMode 
+            ? 'Chưa có tài khoản? <span onclick="toggleAuth()">Đăng ký ngay</span>' 
+            : 'Đã có tài khoản? <span onclick="toggleAuth()">Đăng nhập</span>';
+        document.getElementById('msg').innerText = "";
+    };
+
+    // Xử lý nút bấm chính
+    document.getElementById('btnMain').onclick = async () => {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('password').value;
+        const msg = document.getElementById('msg');
+        
+        if(!email || !pass) {
+            msg.innerText = "Vui lòng nhập đầy đủ thông tin!";
+            msg.className = "error";
+            return;
+        }
+
+        try {
+            if (isLoginMode) {
+                // ĐĂNG NHẬP
+                await signInWithEmailAndPassword(auth, email, pass);
+                window.location.href = "index.html";
+            } else {
+                // ĐĂNG KÝ
+                await createUserWithEmailAndPassword(auth, email, pass);
+                msg.innerText = "Đăng ký thành công! Đang chuyển hướng...";
+                msg.className = "success";
+                setTimeout(() => { window.location.href = "index.html"; }, 1500);
+            }
+        } catch (error) {
+            console.error(error);
+            msg.className = "error";
+            switch (error.code) {
+                case 'auth/email-already-in-use': msg.innerText = "Email này đã được sử dụng!"; break;
+                case 'auth/weak-password': msg.innerText = "Mật khẩu phải ít nhất 6 ký tự!"; break;
+                case 'auth/user-not-found': 
+                case 'auth/wrong-password': 
+                case 'auth/invalid-credential': msg.innerText = "Email hoặc mật khẩu không chính xác!"; break;
+                default: msg.innerText = "Lỗi: " + error.message;
+            }
+        }
+    };
+</script>
+
+</body>
+</html>
